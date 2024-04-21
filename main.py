@@ -17,15 +17,16 @@ def main(cfg):
         # name=cfg.mode
     )
     rng = random.PRNGKey(cfg.seed)
+    rng_BLO_instance, rng_BLO_solver, rng_trainer = random.split(rng, 3)
 
     # create problem instance
-    BLO_instance = get_BLO_instance(cfg)
+    BLO_instance = get_BLO_instance(cfg)(cfg, rng_BLO_instance)
 
     # create method instance
-    method = get_method(cfg)
+    method = get_method(cfg)(BLO_instance, cfg, rng_BLO_solver)
 
     # Construct the JaxTrainer
-    trainer = JaxTrainer(cfg=cfg, method=method, rng=rng)
+    trainer = JaxTrainer(cfg=cfg, solver=method, problem=BLO_instance, rng=rng_trainer)
 
     # Fit the model
     trainer.fit()

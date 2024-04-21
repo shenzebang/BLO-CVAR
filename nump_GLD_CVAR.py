@@ -40,7 +40,7 @@ def g(x, y):
     elif y > 0 and x > 3*np.pi:
         return (x - 3*np.pi + y)**2
     else:
-        return np.nan
+        return 0
 
 def gradient_g(x, y):
     # Calculating partial derivatives for x and y
@@ -205,7 +205,7 @@ gamma=0.01
 
 beta_init=0
 beta_num_itera=100
-num_iterations1=5000
+num_iterations1=1000
 num_iterations2=1
 step_size=1
 #step_size_beta=0.1
@@ -215,15 +215,18 @@ samples = []
 theta=np.array([10,10])
 f_value_sum=0
 samples_phi_grad=[]
-for num_iterations in range(20):
-    for iteration in range(500):
+for num_iterations in range(30):
+    for iteration in range(2000):
         init_x=20*random.random()-10+5+theta[0]
         init_y=20*random.random()-10-4.5+theta[1]
-        # Run the algorithm and get samples at iteration 100
+        
         x1,y1 = gradient_langevin_dynamics_iteration(num_iterations1, epsilon, step_size, noise_scale, init_x, init_y, theta)
         samples.append((x1, y1))
     print('len_samples:',len(samples))
     CVAR, beta=CVAR_delta(theta, samples, epsilon, delta, gamma)
+    if num_iterations>20:
+        step_size_gd=step_size_gd/np.sqrt(num_iterations)
+    step_size_gd=step_size_gd#/(num_iterations+1)
     theta_1=gradient_descent(theta, beta, step_size_gd, samples, epsilon, delta, gamma,beta_num_itera)    
     theta=theta_1
     print('CVAR_delta:',CVAR_delta(theta, samples, epsilon, delta, gamma))
