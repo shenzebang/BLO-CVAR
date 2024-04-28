@@ -1,20 +1,7 @@
-info:
-  algorithm_name: !!str CVaR-Langevin
-
-langevin:
-  epsilon: !!float 1e-3 # diffusion coefficient
-  dt: !!float 1e0 # resolution of time discretization
-  n_steps: !!int 5,000 # number of Langevin steps
-
-cvar:
-  delta: !!float 1e-2 # quantile parameter in CVaR
-  gamma: !!float 1e-2 # smoothing parameter in CVaR
-  n_batch: !!int 64 # size of minibatch for CVaR gradient
-  n_batch_score: !!int 5,000 # number of particles for estimating \partial_\theta \log \pi_\lambda(\theta)(x)
-
+defaults:
+  - solver: cvarblo
+  - problem: handcraft
 train:
-  stepsize_beta: !!float 1e-2 # stepsize for minimizing beta in CVaR
-  stepsize_theta: !!float 1e-2 # stepsize for minimizing theta in BLO
-  total_iterations: !!int 5,000 # number of GD steps for theta
+  total_iterations: !!int 5000 # number of GD steps for theta
 
 seed: 1
