@@ -7,7 +7,7 @@ BLOINSTANCES = {
 }
 
 BLOSOLVERS = {
-    "cvar": cvarblo.CVaRBLOSolver
+    "cvar-langevin": cvarblo.CVaRBLOSolver
 }
 
 def get_BLO_instance(cfg: DictConfig):

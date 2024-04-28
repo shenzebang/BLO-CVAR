@@ -1,45 +1,70 @@
 from omegaconf import DictConfig
-from jax.random import KeyArray
 from collections import namedtuple
+from abc import ABC, abstractmethod
+
 
 TrainState = namedtuple("TrainState", "opt_state, UL_param, LL_param")
-class SLOProblem:
+ProblemDimension = namedtuple("ProblemDimension", "UL_dim, LL_dim")
+
+class Distribution(ABC):
+    def __init__(self) -> None:
+        pass
+
+    @abstractmethod
+    def sample(self, rng, batch_size):
+        raise NotImplementedError
+
+class SLOProblem(ABC):
     def __init__(self, min_or_max = 'max') -> None:
         self.min_or_max = min_or_max
-        pass
+        self.problem_dimension = None # an SLOProblem instance should specify the problem dimension.
 
-    def value_fn(self):
-        pass
+    @abstractmethod
+    def value_fn(self, theta, x):
+        raise NotImplementedError
 
-class BLOProblem:
+class BLOProblem(ABC):
     def __init__(self, 
                  cfg, rng) -> None:
-        self.upper_level_problem = self.init_upper_level_problem()
-        self.lower_level_problem = self.init_lower_level_problem()
         self.cfg = cfg
         self.rng = rng
+        self.problem_UL = self.init_upper_level_problem_fn()
+        self.problem_LL = self.init_lower_level_problem_fn()
+        self.dim = self._get_problem_dimension_fn()
+        
+    def _get_problem_dimension_fn(self, ) -> ProblemDimension:
+        if not isinstance(self.problem_UL.problem_dimension, ProblemDimension) or not isinstance(self.problem_LL.problem_dimension, ProblemDimension):
+            raise ValueError("Please define the problem dimension of the upper and the lower level problems!")
+        if self.problem_UL.problem_dimension != self.problem_LL.problem_dimension:
+            raise ValueError("The upper and lower level problems must have the same problem dimension!")
+        return self.problem_UL.problem_dimension
 
-    def init_upper_level_problem(self, ) -> SLOProblem:
+    @abstractmethod
+    def init_upper_level_problem_fn(self, ) -> SLOProblem:
         raise NotImplementedError
     
-    def init_lower_level_problem(self, ) -> SLOProblem:
+    @abstractmethod
+    def init_lower_level_problem_fn(self, ) -> SLOProblem:
         raise NotImplementedError
     
     
     
-class BLOSolver:
-    def __init__(self, blo_problem: BLOProblem, cfg: DictConfig, rng: KeyArray) -> None:
+class BLOSolver(ABC):
+    def __init__(self, blo_problem: BLOProblem, cfg: DictConfig, rng) -> None:
         self.blo_problem = blo_problem
         
-
+    @abstractmethod
     def init_train_state(self, rng_init) -> TrainState:
         raise NotImplementedError
 
+    @abstractmethod
     def step_fn(self) -> TrainState: 
         pass
     
-    def plot_fn(self, forward_fn, params, rng):
+    @abstractmethod
+    def plot_fn(self, rng, ts: TrainState):
         raise NotImplementedError
     
-    def metric_fn(self, forward_fn, params, time_interval, rng):
-        pass
+    # @abstractmethod
+    # def metric_fn(self, forward_fn, params, time_interval, rng):
+    #     pass

@@ -7,15 +7,15 @@ from core.trainer import JaxTrainer
 
 @hydra.main(config_path="conf", config_name="config")
 def main(cfg):
-    wandb.login()
-    run = wandb.init(
-        # Set the project where this run will be logged
-        project=f"BLO-{cfg.info.algorithm_name}",
-        # Track hyperparameters and run metadata
-        config=OmegaConf.to_container(cfg),
-        # hyperparameter tuning mode or normal mode.
-        # name=cfg.mode
-    )
+    # wandb.login()
+    # run = wandb.init(
+    #     # Set the project where this run will be logged
+    #     project=f"BLO-{cfg.solver.name}",
+    #     # Track hyperparameters and run metadata
+    #     config=OmegaConf.to_container(cfg),
+    #     # hyperparameter tuning mode or normal mode.
+    #     # name=cfg.mode
+    # )
     rng = random.PRNGKey(cfg.seed)
     rng_BLO_instance, rng_BLO_solver, rng_trainer = random.split(rng, 3)
 
@@ -32,7 +32,7 @@ def main(cfg):
     trainer.fit()
 
     # Test the model
-    wandb.finish()
+    # wandb.finish()
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,8 @@
-from api import BLOProblem, SLOProblem
+from api import BLOProblem, SLOProblem, ProblemDimension
 import jax.numpy as jnp
+import jax 
 
+@jax.jit
 def g(xy: jnp.ndarray):
     assert xy.ndim == 1
     x, y = xy[0], xy[1]
@@ -30,28 +32,30 @@ def g(xy: jnp.ndarray):
 class HandCraftUpper(SLOProblem):
     def __init__(self, min_or_max='max') -> None:
         super().__init__(min_or_max)
+        self.problem_dimension = ProblemDimension(UL_dim=2, LL_dim=2)
 
     def value_fn(self, theta, x):
         if x.ndim != 1:
             raise ValueError(f"x should be a 1-D array, but got {x.ndim} array as input.")
-        return jnp.sum(x ** 2, axis=-1)
+        return jnp.sum(x ** 2, axis=-1) + jnp.sum(theta ** 2, axis=-1)
     
 class HandCraftLower(SLOProblem):
     def __init__(self, min_or_max='min') -> None:
         super().__init__(min_or_max)
+        self.problem_dimension = ProblemDimension(UL_dim=2, LL_dim=2)
 
     def value_fn(self, theta, x):
         if x.ndim != 1:
             raise ValueError(f"x should be a 1-D array, but got {x.ndim} array as input.")
-        return g(x)
+        return g(x - theta)
 
 
 class HandCraft(BLOProblem):
-    def __init__(self, cfg, rng) -> None:
-        super().__init__(cfg, rng)
+    # def __init__(self, cfg, rng) -> None:
+    #     super().__init__(cfg, rng)
         
-    def init_upper_level_fn(self, ):
+    def init_upper_level_problem_fn(self, ):
         return HandCraftUpper()
     
-    def init_lower_level_fn(self, ):
+    def init_lower_level_problem_fn(self, ):
         return HandCraftLower()
