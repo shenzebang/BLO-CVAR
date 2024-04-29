@@ -6,7 +6,7 @@ from utils.sampling import BLOLangevinSampler
 import jax.numpy as jnp
 import jax.random as random
 import matplotlib.pyplot as plt
-
+from jax import lax
 
 
 class InitialDistribution(Distribution):
@@ -59,7 +59,7 @@ class CVaRBLOSolver(BLOSolver):
     
     def grad_UL_fn(self, param_UL, samples_LL):
         # compute beta
-        CVaR, beta=self.CVAR_fn(param_UL, samples_LL)
+        CVaR, beta = self.CVaR_and_beta_fn(param_UL, samples_LL)
         # E[\partial_\theta g]
         partial_theta_g_fn = jax.grad(self.blo_problem.problem_LL.value_fn, argnums=0)
         partial_theta_g_vmap_x_fn = jax.vmap(partial_theta_g_fn, in_axes=[None, 0])
@@ -75,21 +75,33 @@ class CVaRBLOSolver(BLOSolver):
         
         grad_upper_level_single_fn = jax.vmap(grad_upper_level_single_fn, in_axes=[0,])
 
-        return jnp.mean(grad_upper_level_single_fn(samples_LL), axis=0), {"CVaR": CVaR, "mean_LL": jnp.mean(samples_LL, axis=0)}
+        return jnp.mean(grad_upper_level_single_fn(samples_LL), axis=0), {"CVaR": CVaR, "norm of mean_LL": jnp.sum(jnp.mean(samples_LL, axis=0) ** 2)}
     
-    def CVAR_fn(self, param_UL, samples_LL):
+    def CVaR_and_beta_fn(self, param_UL, samples_LL):
         f_vmap_x = jax.vmap(self.blo_problem.problem_UL.value_fn, in_axes=[None, 0])
         sample_f_values = f_vmap_x(param_UL, samples_LL)
-        beta = jnp.nanquantile(sample_f_values, 1. - self.delta, axis=0)
-        # h_vmap_fx = jax.vmap(self.h)
-        # expected_h = jnp.mean(h_vmap_fx(sample_f_values - beta)) / self.delta
-        CVaR = self._CVaR_fn(beta, sample_f_values)
-        # TODO: now beta is initialized with 1-\delta quantile, need to further implement the optimization over beta
+        
+        # initialize beta with (1-delta) quantile
+        beta_init = jnp.nanquantile(sample_f_values, 1. - self.delta, axis=0)
+        # update beta with GD
+        beta = self.update_beta(beta_init, sample_f_values)
+        # Compute the smoothed CVaR using the optimal beta
+        CVaR = self.beta_sample_to_CVaR_fn(beta, sample_f_values)
         return CVaR, beta 
     
-    def _CVaR_fn(self, beta, sample_f_values):
+    def beta_sample_to_CVaR_fn(self, beta, sample_f_values):
         h_vmap_fx = jax.vmap(self.h)
         return jnp.mean(h_vmap_fx(sample_f_values - beta)) / self.delta + beta
+    
+    def update_beta(self, beta_init, samples):
+        def gd_step(beta, x):
+            grad_beta_fn = jax.grad(self.beta_sample_to_CVaR_fn, argnums=0)
+            beta = beta - self.cfg.solver.beta_optimizer.step_size * grad_beta_fn(beta, samples)
+            return beta, None
+        
+        beta, _ = lax.scan(gd_step, beta_init, None, self.cfg.solver.beta_optimizer.number_of_steps)
+        return beta
+
     
     # smoothed version of max(x, 0)
     def h(self, fx: jnp.ndarray):

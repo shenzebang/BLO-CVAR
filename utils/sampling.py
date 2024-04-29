@@ -13,7 +13,7 @@ def ula_kernel(rng, param, score_fn, dt, epsilon):
     param = param - dt*paramGrad + jnp.sqrt(2*dt*epsilon)*random.normal(key=subkey, shape=(param.shape))
     return rng, param
 
-@partial(jit, static_argnums=(1,2,3,4))
+# @partial(jit, static_argnums=(1,2,3,4))
 def ula_sampler_full_jax_jit(rng, score_fn, num_samples, dt, epsilon, x_0):
 
     def ula_step(carry, x):

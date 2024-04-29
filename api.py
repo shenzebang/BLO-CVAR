@@ -53,6 +53,8 @@ class BLOProblem(ABC):
 class BLOSolver(ABC):
     def __init__(self, blo_problem: BLOProblem, cfg: DictConfig, rng) -> None:
         self.blo_problem = blo_problem
+        self.cfg = cfg
+        self.rng = rng
         
     @abstractmethod
     def init_train_state(self, rng_init) -> TrainState:
