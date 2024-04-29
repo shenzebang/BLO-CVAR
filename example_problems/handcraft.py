@@ -2,7 +2,6 @@ from api import BLOProblem, SLOProblem, ProblemDimension
 import jax.numpy as jnp
 import jax 
 
-@jax.jit
 def g(xy: jnp.ndarray):
     assert xy.ndim == 1
     x, y = xy[0], xy[1]
@@ -37,7 +36,8 @@ class HandCraftUpper(SLOProblem):
     def value_fn(self, theta, x):
         if x.ndim != 1:
             raise ValueError(f"x should be a 1-D array, but got {x.ndim} array as input.")
-        return jnp.sum(x ** 2, axis=-1) + jnp.sum(theta ** 2, axis=-1)
+        return jnp.sum(x ** 2, axis=-1) 
+    # + jnp.sum(theta ** 2, axis=-1)
     
 class HandCraftLower(SLOProblem):
     def __init__(self, min_or_max='min') -> None:

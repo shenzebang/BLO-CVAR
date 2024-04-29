@@ -5,13 +5,13 @@ cvar:
 
 langevin_sampler:
   temperature: !!float 1e-3 # diffusion coefficient
-  step_size: !!float 5e-1 # resolution of time discretization
-  number_of_steps: !!int 20000 # number of Langevin steps
-  batch_size: !!int 2000
+  step_size: !!float 1e-1 # resolution of time discretization
+  number_of_steps: !!int 50000 # number of Langevin steps
+  batch_size: !!int 5000
 
 upper_level_optimizer:
   optimzer: !!str SGD
   step_size: !!float 1e-2 # stepsize for minimizing beta in CVaR
-  momentum: !!float .9 # momentum for minimizing theta in BLO
+  momentum: !!float 0. # momentum for minimizing theta in BLO
   
 
