@@ -19,12 +19,13 @@ class InitialDistribution(Distribution):
 class CVaRBLOSolver(BLOSolver):
     def __init__(self, blo_problem: BLOProblem, cfg: DictConfig, rng) -> None:
         super().__init__(blo_problem, cfg, rng)
+        # TODO: should be either min-max or max-max since there are two variables.
         if blo_problem.problem_UL.min_or_max != 'max':
             raise ValueError("Currently, CVaR BLO solver supports only pessimistic minimal selection.")
         # Hyperparameters 
         self.lower_temperature = cfg.solver.langevin_sampler.temperature
-        self.delta = cfg.solver.cvar.delta
-        self.gamma = cfg.solver.cvar.gamma
+        self.delta = cfg.solver.cvar.delta # (1-delta) is the quantile
+        self.gamma = cfg.solver.cvar.gamma # parameter for the smoothed version of max{0, x}
 
         # TODO: choose optimizer based on cfg
         self.optimizer_UL = optax.sgd(learning_rate=cfg.solver.upper_level_optimizer.step_size, 
@@ -46,19 +47,19 @@ class CVaRBLOSolver(BLOSolver):
         param_UL, opt_state_UL = ts.UL_param, ts.opt_state
         
         samples_LL = self.langevin_LL.sample_fn(rng, param_UL)
-        grad_UL = self.grad_UL_fn(param_UL, samples_LL)
+        grad_UL, stats = self.grad_UL_fn(param_UL, samples_LL)
         # need to negate the grad_UL since we are maximizing the UL objective
-        grad_UL = jax.tree_map(lambda x: -x, grad_UL)
+        # grad_UL = jax.tree_map(lambda x: -x, grad_UL)
         param_UL, opt_state_UL = self.opt_step_fn(param_UL, opt_state_UL, grad_UL)
         return TrainState(
             opt_state=opt_state_UL,
             UL_param=param_UL, 
             LL_param=None # CVaR does not return lower-level iterate
-            )
+            ), stats
     
     def grad_UL_fn(self, param_UL, samples_LL):
         # compute beta
-        CVAR, beta=self.CVAR(param_UL, samples_LL)
+        CVaR, beta=self.CVAR_fn(param_UL, samples_LL)
         # E[\partial_\theta g]
         partial_theta_g_fn = jax.grad(self.blo_problem.problem_LL.value_fn, argnums=0)
         partial_theta_g_vmap_x_fn = jax.vmap(partial_theta_g_fn, in_axes=[None, 0])
@@ -74,16 +75,21 @@ class CVaRBLOSolver(BLOSolver):
         
         grad_upper_level_single_fn = jax.vmap(grad_upper_level_single_fn, in_axes=[0,])
 
-        return jnp.mean(grad_upper_level_single_fn(samples_LL), axis=0)
+        return jnp.mean(grad_upper_level_single_fn(samples_LL), axis=0), {"CVaR": CVaR, "mean_LL": jnp.mean(samples_LL, axis=0)}
     
-    def CVAR(self, param_UL, samples_LL):
-        # TODO: now beta2 is initialized with 1-\delta quantile, need to further implement the optimization over beta
+    def CVAR_fn(self, param_UL, samples_LL):
         f_vmap_x = jax.vmap(self.blo_problem.problem_UL.value_fn, in_axes=[None, 0])
         sample_f_values = f_vmap_x(param_UL, samples_LL)
         beta = jnp.nanquantile(sample_f_values, 1. - self.delta, axis=0)
+        # h_vmap_fx = jax.vmap(self.h)
+        # expected_h = jnp.mean(h_vmap_fx(sample_f_values - beta)) / self.delta
+        CVaR = self._CVaR_fn(beta, sample_f_values)
+        # TODO: now beta is initialized with 1-\delta quantile, need to further implement the optimization over beta
+        return CVaR, beta 
+    
+    def _CVaR_fn(self, beta, sample_f_values):
         h_vmap_fx = jax.vmap(self.h)
-        expected_h = jnp.mean(h_vmap_fx(sample_f_values - beta)) / self.delta
-        return beta + expected_h, beta 
+        return jnp.mean(h_vmap_fx(sample_f_values - beta)) / self.delta + beta
     
     # smoothed version of max(x, 0)
     def h(self, fx: jnp.ndarray):

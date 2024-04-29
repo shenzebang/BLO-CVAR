@@ -1,6 +1,7 @@
 from omegaconf import DictConfig
 from collections import namedtuple
 from abc import ABC, abstractmethod
+from typing import Dict, Tuple
 
 
 TrainState = namedtuple("TrainState", "opt_state, UL_param, LL_param")
@@ -58,7 +59,7 @@ class BLOSolver(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def step_fn(self) -> TrainState: 
+    def step_fn(self) -> Tuple[TrainState, Dict]: 
         pass
     
     @abstractmethod
