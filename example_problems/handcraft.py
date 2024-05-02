@@ -37,6 +37,9 @@ class HandCraftUpper(SLOProblem):
         if x.ndim != 1:
             raise ValueError(f"x should be a 1-D array, but got {x.ndim} array as input.")
         return jnp.sum(x ** 2, axis=-1) 
+    
+    def define_dimension(self) -> ProblemDimension:
+        return ProblemDimension(UL_dim=2, LL_dim=2)
     # + jnp.sum(theta ** 2, axis=-1)
     
 class HandCraftLower(SLOProblem):
@@ -48,12 +51,12 @@ class HandCraftLower(SLOProblem):
         if x.ndim != 1:
             raise ValueError(f"x should be a 1-D array, but got {x.ndim} array as input.")
         return g(x - theta)
+    
+    def define_dimension(self) -> ProblemDimension:
+        return ProblemDimension(UL_dim=2, LL_dim=2)
 
 
 class HandCraft(BLOProblem):
-    # def __init__(self, cfg, rng) -> None:
-    #     super().__init__(cfg, rng)
-        
     def init_upper_level_problem_fn(self, ):
         return HandCraftUpper()
     

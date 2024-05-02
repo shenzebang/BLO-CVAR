@@ -1,4 +1,3 @@
-
 from omegaconf import DictConfig
 from api import BLOProblem, BLOSolver, TrainState, Distribution
 import jax, optax
@@ -36,11 +35,13 @@ class CVaRBLOSolver(BLOSolver):
         
 
     def init_train_state(self, rng_init):
+        # TODO: implement the param initialization based on problem
         param_init = jax.random.normal(rng_init, [self.blo_problem.dim.UL_dim])
         return TrainState(
             opt_state=self.optimizer_UL.init(param_init),
             UL_param=param_init,
             LL_param=None,
+            auxiliary=None
         )
 
     def step_fn(self, ts: TrainState, rng):
@@ -51,10 +52,12 @@ class CVaRBLOSolver(BLOSolver):
         # need to negate the grad_UL since we are maximizing the UL objective
         # grad_UL = jax.tree_map(lambda x: -x, grad_UL)
         param_UL, opt_state_UL = self.opt_step_fn(param_UL, opt_state_UL, grad_UL)
+        stats["param_UL"] = param_UL
         return TrainState(
             opt_state=opt_state_UL,
             UL_param=param_UL, 
-            LL_param=None # CVaR does not return lower-level iterate
+            LL_param=None,
+            auxiliary=None # CVaR does not return lower-level iterate
             ), stats
     
     def grad_UL_fn(self, param_UL, samples_LL):

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Tuple
 
 
-TrainState = namedtuple("TrainState", "opt_state, UL_param, LL_param")
+TrainState = namedtuple("TrainState", "opt_state, UL_param, LL_param, auxiliary")
 ProblemDimension = namedtuple("ProblemDimension", "UL_dim, LL_dim")
 
 class Distribution(ABC):
@@ -16,12 +16,16 @@ class Distribution(ABC):
         raise NotImplementedError
 
 class SLOProblem(ABC):
-    def __init__(self, min_or_max = 'max') -> None:
+    def __init__(self, min_or_max = 'max',) -> None:
         self.min_or_max = min_or_max
-        self.problem_dimension = None # an SLOProblem instance should specify the problem dimension.
+        self.problem_dimension = self.define_dimension() # an SLOProblem instance should specify the problem dimension.
 
     @abstractmethod
     def value_fn(self, theta, x):
+        raise NotImplementedError
+    
+    @abstractmethod
+    def define_dimension(self, ) -> ProblemDimension:
         raise NotImplementedError
 
 class BLOProblem(ABC):

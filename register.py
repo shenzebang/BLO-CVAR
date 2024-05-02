@@ -1,13 +1,14 @@
 from omegaconf import DictConfig
 from example_problems import handcraft
-from methods import cvarblo
+from methods import cvarblo, iaptt_gm
 
 BLOINSTANCES = {
     "handcraft": handcraft.HandCraft,
 }
 
 BLOSOLVERS = {
-    "cvar-langevin": cvarblo.CVaRBLOSolver
+    "cvar-langevin": cvarblo.CVaRBLOSolver,
+    "iaptt-gm": iaptt_gm.IAPTT_GM,  
 }
 
 def get_BLO_instance(cfg: DictConfig):
